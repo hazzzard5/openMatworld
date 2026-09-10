@@ -1,12 +1,12 @@
 [
   {
-    "id": "queen-city-grappling-middletown",
+    "id": "queen-city-grappling-springboro",
     "name": "Queen City Grappling Club",
-    "city": "Middletown",
+    "city": "Springboro",
     "country": "United States",
-    "lat": 39.5151,
-    "lng": -84.3983,
-    "address": "665 East Second St, Middletown, OH 45044",
+    "lat": 39.5573,
+    "lng": -84.2515,
+    "address": "815 W Central Ave, Springboro, OH 45066",
     "styles": ["gi", "nogi", "wrestling", "mma"],
     "sessions": [{ "day": "sun", "start": "10:00", "end": "12:00" }],
     "dropIn": "Open mat — visiting grapplers welcome",
