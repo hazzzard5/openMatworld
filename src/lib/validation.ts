@@ -58,8 +58,12 @@ const gymSubmissionFields = z.object({
   instagram: instagramSchema,
   contactEmail: z.string().trim().email("Not a valid email").max(160).optional().or(z.literal("")),
   notes: z.string().trim().max(600).optional().or(z.literal("")),
-  /** Honeypot: real people leave this empty. */
-  website_url: z.string().max(0).optional(),
+  /**
+   * Honeypot: real people leave this empty. Deliberately not length-checked
+   * here — the route accepts a filled one and silently discards it, so a bot
+   * gets a 201 rather than a validation error naming the trap.
+   */
+  website_url: z.string().max(240).optional(),
 });
 
 export const gymSubmissionSchema = gymSubmissionFields.refine(

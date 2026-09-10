@@ -1,22 +1,15 @@
-import sponsorData from "../../data/sponsors.json";
+"use client";
 
-type SponsorSlot = {
-  id: string;
-  name: string;
-  tagline?: string;
-  url: string;
-  logo?: string;
-  tier: "headline" | "standard";
-  placeholder?: boolean;
-};
-
-const sponsors = sponsorData as SponsorSlot[];
+import { useState } from "react";
+import SponsorModal from "./SponsorModal";
+import type { Sponsor } from "@/lib/types";
 
 /**
  * The right-hand rail. Empty slots read as an invitation rather than a gap,
  * so the layout looks intentional before the first sponsor signs.
  */
-export default function SponsorRail() {
+export default function SponsorRail({ sponsors }: { sponsors: Sponsor[] }) {
+  const [open, setOpen] = useState(false);
   const headline = sponsors.filter((s) => s.tier === "headline");
   const standard = sponsors.filter((s) => s.tier === "standard");
 
@@ -26,7 +19,7 @@ export default function SponsorRail() {
         <p className="text-[10.5px] tracking-[0.14em] text-ink-400 uppercase">Supported by</p>
 
         {headline.map((s) => (
-          <SponsorCard key={s.id} sponsor={s} />
+          <SponsorCard key={s.id} sponsor={s} onEnquire={() => setOpen(true)} />
         ))}
 
         {standard.length > 0 && (
@@ -34,7 +27,7 @@ export default function SponsorRail() {
             <div className="h-px bg-ink-800" />
             <div className="space-y-3">
               {standard.map((s) => (
-                <SponsorCard key={s.id} sponsor={s} />
+                <SponsorCard key={s.id} sponsor={s} onEnquire={() => setOpen(true)} />
               ))}
             </div>
           </>
@@ -45,12 +38,13 @@ export default function SponsorRail() {
             Grapplers plan their trips here. Put your gi, rashguard, camp or seminar in
             front of them.
           </p>
-          <a
-            href="mailto:sponsors@openmat.world?subject=Sponsoring%20Open%20Mat%20World"
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
             className="mt-3 inline-block rounded-lg border border-ink-600 px-3 py-1.5 text-[12px] font-medium text-ink-200 transition hover:border-mat-500 hover:text-mat-300"
           >
             Sponsor this space
-          </a>
+          </button>
         </div>
       </div>
 
@@ -59,11 +53,19 @@ export default function SponsorRail() {
           Community-run. Listings are free and always will be.
         </p>
       </footer>
+
+      <SponsorModal open={open} onClose={() => setOpen(false)} />
     </aside>
   );
 }
 
-function SponsorCard({ sponsor }: { sponsor: SponsorSlot }) {
+function SponsorCard({
+  sponsor,
+  onEnquire,
+}: {
+  sponsor: Sponsor;
+  onEnquire: () => void;
+}) {
   const headline = sponsor.tier === "headline";
   const initials = sponsor.name
     .split(" ")
@@ -72,49 +74,60 @@ function SponsorCard({ sponsor }: { sponsor: SponsorSlot }) {
     .join("")
     .toUpperCase();
 
+  const shell = `block w-full rounded-xl border px-4 text-left transition ${
+    sponsor.placeholder
+      ? "border-ink-800 bg-ink-850/60 hover:border-ink-600"
+      : "border-ink-700 bg-ink-850 hover:border-mat-500/60"
+  } ${headline ? "py-5" : "py-3.5"}`;
+
+  const body = (
+    <div className="flex items-center gap-3">
+      {sponsor.logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={sponsor.logo} alt="" className={headline ? "h-9 w-auto" : "h-7 w-auto"} />
+      ) : (
+        <span
+          className={`grid shrink-0 place-items-center rounded-lg border border-ink-700 font-semibold text-ink-400 ${
+            headline ? "size-10 text-[13px]" : "size-8 text-[11px]"
+          }`}
+        >
+          {initials}
+        </span>
+      )}
+      <span className="min-w-0">
+        <span
+          className={`block truncate font-semibold text-white ${
+            headline ? "text-[14px]" : "text-[13px]"
+          }`}
+        >
+          {sponsor.name}
+        </span>
+        {sponsor.tagline && (
+          <span className="mt-0.5 block text-[11.5px] leading-snug text-ink-400">
+            {sponsor.tagline}
+          </span>
+        )}
+      </span>
+    </div>
+  );
+
+  // An unsold slot is a sales pitch, not a destination — it opens the form.
+  if (sponsor.placeholder) {
+    return (
+      <button type="button" onClick={onEnquire} className={shell}>
+        {body}
+      </button>
+    );
+  }
+
   return (
     <a
       href={sponsor.url}
-      target={sponsor.url.startsWith("http") ? "_blank" : undefined}
+      target="_blank"
       rel="noopener noreferrer sponsored"
-      className={`block rounded-xl border px-4 transition ${
-        sponsor.placeholder
-          ? "border-ink-800 bg-ink-850/60 hover:border-ink-600"
-          : "border-ink-700 bg-ink-850 hover:border-mat-500/60"
-      } ${headline ? "py-5" : "py-3.5"}`}
+      className={shell}
     >
-      <div className="flex items-center gap-3">
-        {sponsor.logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={sponsor.logo}
-            alt=""
-            className={headline ? "h-9 w-auto" : "h-7 w-auto"}
-          />
-        ) : (
-          <span
-            className={`grid shrink-0 place-items-center rounded-lg border border-ink-700 font-semibold text-ink-400 ${
-              headline ? "size-10 text-[13px]" : "size-8 text-[11px]"
-            }`}
-          >
-            {initials}
-          </span>
-        )}
-        <span className="min-w-0">
-          <span
-            className={`block truncate font-semibold text-white ${
-              headline ? "text-[14px]" : "text-[13px]"
-            }`}
-          >
-            {sponsor.name}
-          </span>
-          {sponsor.tagline && (
-            <span className="mt-0.5 block text-[11.5px] leading-snug text-ink-400">
-              {sponsor.tagline}
-            </span>
-          )}
-        </span>
-      </div>
+      {body}
     </a>
   );
 }

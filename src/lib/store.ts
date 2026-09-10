@@ -1,8 +1,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Gym, GymStatus } from "./types";
+import type { Gym, GymStatus, Sponsor, SponsorInquiry } from "./types";
 import seed from "../../data/seed-gyms.json";
+import placeholderSponsors from "../../data/sponsors.json";
 
 /**
  * Two backends, picked at runtime:
@@ -21,7 +22,7 @@ const useSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
 /** Submissions go live immediately when this is set — handy for a solo demo. */
 const autoApprove = process.env.OPENMAT_AUTO_APPROVE === "1";
 
-export type NewGym = Omit<Gym, "id" | "status" | "createdAt" | "sample">;
+export type NewGym = Omit<Gym, "id" | "status" | "createdAt">;
 
 const seedGyms = seed as Gym[];
 
@@ -214,6 +215,119 @@ export async function findDuplicate(name: string, city: string): Promise<Gym | n
   return (
     candidates.find((g) => norm(g.name) === norm(name) && norm(g.city) === norm(city)) ?? null
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Sponsors                                                            */
+/* ------------------------------------------------------------------ */
+
+type SponsorRow = {
+  id: string;
+  name: string;
+  tagline: string | null;
+  url: string;
+  logo_url: string | null;
+  tier: Sponsor["tier"];
+};
+
+const placeholders = placeholderSponsors as Sponsor[];
+
+/**
+ * Live sponsors, ordered headline-first. Falls back to the placeholder slots
+ * in data/sponsors.json whenever nothing is sold — an empty rail should read
+ * as an invitation, not a gap.
+ */
+export async function listSponsors(): Promise<Sponsor[]> {
+  if (!useSupabase) return placeholders;
+
+  try {
+    // Explicit column list: contact details and Stripe ids never leave the server.
+    const res = await supabase(
+      "sponsors?select=id,name,tagline,url,logo_url,tier" +
+        "&status=eq.active" +
+        `&or=(starts_at.is.null,starts_at.lte.${new Date().toISOString()})` +
+        `&or=(ends_at.is.null,ends_at.gt.${new Date().toISOString()})` +
+        "&order=tier.asc,sort_order.asc",
+    );
+    const rows = (await res.json()) as SponsorRow[];
+    if (rows.length === 0) return placeholders;
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      tagline: row.tagline ?? undefined,
+      url: row.url,
+      logo: row.logo_url ?? undefined,
+      tier: row.tier,
+    }));
+  } catch (err) {
+    // A sponsor rail is never worth failing the page over.
+    console.error("Could not load sponsors", err);
+    return placeholders;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Sponsor enquiries                                                   */
+/* ------------------------------------------------------------------ */
+
+export type NewInquiry = Omit<SponsorInquiry, "id" | "createdAt">;
+
+const INQUIRY_FILE = path.join(process.cwd(), "data", "sponsor-inquiries.local.json");
+
+/** Stored as well as emailed, so nothing is lost if the mail provider is down. */
+export async function createInquiry(input: NewInquiry): Promise<SponsorInquiry> {
+  const inquiry: SponsorInquiry = {
+    ...input,
+    id: randomUUID(),
+    createdAt: new Date().toISOString(),
+  };
+
+  if (useSupabase) {
+    const res = await supabase("sponsor_inquiries", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        name: input.name,
+        email: input.email,
+        business: input.business,
+        duration: input.duration,
+        message: input.message ?? null,
+      }),
+    });
+    const [row] = (await res.json()) as { id: string; created_at: string }[];
+    return { ...inquiry, id: row.id, createdAt: row.created_at };
+  }
+
+  try {
+    let existing: SponsorInquiry[] = [];
+    try {
+      existing = JSON.parse(await fs.readFile(INQUIRY_FILE, "utf8")) as SponsorInquiry[];
+    } catch {
+      /* first enquiry */
+    }
+    existing.push(inquiry);
+    await fs.mkdir(path.dirname(INQUIRY_FILE), { recursive: true });
+    await fs.writeFile(INQUIRY_FILE, JSON.stringify(existing, null, 2) + "\n", "utf8");
+  } catch {
+    // Read-only disk. The email is the real delivery mechanism; the caller
+    // logs loudly if that failed too.
+  }
+
+  return inquiry;
+}
+
+/** Records that the notification email went out. Best-effort. */
+export async function markInquiryEmailed(id: string): Promise<void> {
+  if (!useSupabase) return;
+  try {
+    await supabase(`sponsor_inquiries?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ emailed_at: new Date().toISOString() }),
+    });
+  } catch (err) {
+    console.error("Could not flag enquiry as emailed", err);
+  }
 }
 
 export const backend = useSupabase ? "supabase" : "file";

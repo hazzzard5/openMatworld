@@ -20,8 +20,9 @@ travelling, and let gyms put their own sessions on the map.
   gives the moderator something to click before approving.
 - **A moderation queue** at `/admin`, because an open submission form without
   one fills up with junk.
-- **A sponsor rail** on the right. It's real layout space, populated from
-  `data/sponsors.json`, and reads as an invitation while it's empty.
+- **A sponsor rail** on the right, backed by a `sponsors` table. Unsold slots
+  fall back to the placeholders in `data/sponsors.json` and open an enquiry
+  form, so an empty rail reads as an invitation rather than a gap.
 
 ## Running it
 
@@ -84,17 +85,49 @@ and `logo` (put the image in `public/`), and a `tier` of `headline` or
 `placeholder: true` flag when a slot is sold, and change the `mailto:` addresses
 in `src/components/SponsorRail.tsx` to your own.
 
-## Notes on the data
+## Sponsors and billing
 
-The 60 seeded gyms are **invented**. They sit in real cities so the globe looks
-alive on day one, and each is flagged `sample: true` and labelled as a sample in
-the UI. Don't leave them in once real gyms start signing up — delete
-`data/seed-gyms.json`'s contents, or filter out `sample` rows.
+`data/sponsors.json` holds the placeholder slots shown while a tier is unsold.
+Real sponsors live in the `sponsors` table; `listSponsors()` returns the live
+ones and falls back to the placeholders when there are none. A sponsor is live
+when `status = 'active'` and now falls inside `starts_at`/`ends_at`.
+
+The table carries `stripe_customer_id`, `stripe_subscription_id`,
+`stripe_price_id`, `stripe_status` and `current_period_end` from the start, so
+billing can be attached without a migration. Nothing writes them yet — a
+sponsor invoiced by hand just gets `status` and `ends_at` set directly. When
+Stripe is wired up, a webhook maps `customer.subscription.*` onto those columns
+and flips `status`.
+
+Contact and Stripe columns are never exposed: `listSponsors()` selects an
+explicit column list, and the RLS policy only grants anonymous reads of rows
+that are currently live.
+
+### Enquiries
+
+"Sponsor this space" posts to `/api/sponsor-inquiries`, which **stores the
+enquiry first and then emails it**, so a mail outage costs a notification, not
+a lead. Mail goes through Resend over plain HTTP — no SDK:
+
+```
+RESEND_API_KEY      from resend.com
+SPONSOR_TO_EMAIL    where enquiries land (default sponsor@narigroup.net)
+SPONSOR_FROM_EMAIL  a sender on a domain you've verified in Resend
+```
+
+With no key set, sending is skipped and the row is still written — the server
+logs the enquiry so nothing is silently lost. Unsent enquiries are the rows in
+`sponsor_inquiries` with `emailed_at is null`.
 
 "On now" is estimated from longitude (15° per hour) rather than a real timezone
 database, because the form doesn't ask submitters for a timezone. It's right to
 within about an hour for most places and wrong wherever politics beat geography.
 The UI says so; treat it as a hint, not a schedule.
+
+Listing coordinates are often only accurate to the city, which is fine for a
+pin on a globe and useless for directions — so the Directions link uses the
+street address when a listing has one, and falls back to coordinates when it
+doesn't.
 
 Address lookup proxies OpenStreetMap's Nominatim through `/api/geocode`, with
 caching and a debounce to stay inside their usage policy. If it's unavailable

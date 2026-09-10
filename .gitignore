@@ -8,3 +8,4 @@ build
 *.tsbuildinfo
 next-env.d.ts
 /data/gyms.local.json
+/data/sponsor-inquiries.local.json

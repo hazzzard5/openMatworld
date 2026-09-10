@@ -2,7 +2,7 @@
   {
     "id": "slot-1",
     "name": "Your brand here",
-    "tagline": "Headline slot — seen on every session, every country.",
+    "tagline": "Headline slot \u2014 seen on every session, every country.",
     "url": "mailto:sponsors@openmat.world?subject=Headline%20sponsorship",
     "tier": "headline",
     "placeholder": true

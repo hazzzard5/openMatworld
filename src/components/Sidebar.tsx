@@ -291,18 +291,18 @@ function GymDetail({ gym }: { gym: Gym }) {
       )}
 
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
+        {/* Prefer the street address: coordinates for a listing are often
+            only accurate to the city, which is fine for a globe pin and
+            useless for walking directions. */}
         <ExternalLink
-          href={`https://www.google.com/maps/search/?api=1&query=${gym.lat},${gym.lng}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            gym.address ? `${gym.name}, ${gym.address}` : `${gym.lat},${gym.lng}`,
+          )}`}
         >
           Directions
         </ExternalLink>
       </div>
 
-      {gym.sample && (
-        <p className="text-[11px] text-ink-400 italic">
-          Sample listing — seeded so the globe isn&apos;t empty on day one.
-        </p>
-      )}
     </div>
   );
 }

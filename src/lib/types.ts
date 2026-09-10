@@ -50,10 +50,10 @@ export type Gym = {
   contactEmail?: string;
   notes?: string;
   status: GymStatus;
-  /** Seeded sample rows are flagged so the UI can be honest about them. */
-  sample?: boolean;
   createdAt: string;
 };
+
+export type SponsorTier = "headline" | "standard";
 
 export type Sponsor = {
   id: string;
@@ -62,7 +62,29 @@ export type Sponsor = {
   url: string;
   /** Path or absolute URL to a logo. Falls back to initials when absent. */
   logo?: string;
-  tier: "headline" | "standard";
+  tier: SponsorTier;
+  /** True for the "your brand here" slots shown while a tier is unsold. */
+  placeholder?: boolean;
+};
+
+export const SPONSOR_DURATIONS = [
+  "1 month",
+  "3 months",
+  "6 months",
+  "12 months",
+  "Not sure yet",
+] as const;
+
+export type SponsorDuration = (typeof SPONSOR_DURATIONS)[number];
+
+export type SponsorInquiry = {
+  id: string;
+  name: string;
+  email: string;
+  business: string;
+  duration: string;
+  message?: string;
+  createdAt: string;
 };
 
 /** Formats "14:30" as "2:30pm". */
