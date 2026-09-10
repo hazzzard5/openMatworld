@@ -436,12 +436,14 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
               <Field label="Open mat times" required hint="In the gym's local time.">
                 <div className="space-y-2">
                   {sessions.map((session, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={i} className="flex flex-wrap items-center gap-2">
+                      {/* At phone width the day drops onto its own line so the
+                          native time pickers keep enough room to show "11:00". */}
                       <select
                         aria-label="Day"
                         value={session.day}
                         onChange={(e) => updateSession(i, { day: e.target.value as Day })}
-                        className={`${inputClass} w-24 shrink-0`}
+                        className={`${inputBase} w-full shrink-0 sm:w-[4.5rem]`}
                       >
                         {DAYS.map((d) => (
                           <option key={d} value={d}>
@@ -449,33 +451,35 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
                           </option>
                         ))}
                       </select>
-                      <input
-                        aria-label="Start time"
-                        type="time"
-                        value={session.start}
-                        onChange={(e) => updateSession(i, { start: e.target.value })}
-                        className={`${inputClass} flex-1`}
-                      />
-                      <span className="text-ink-400">–</span>
-                      <input
-                        aria-label="End time"
-                        type="time"
-                        value={session.end}
-                        onChange={(e) => updateSession(i, { end: e.target.value })}
-                        className={`${inputClass} flex-1`}
-                      />
-                      {sessions.length > 1 && (
-                        <button
-                          type="button"
-                          aria-label="Remove this session"
-                          onClick={() =>
-                            setSessions((prev) => prev.filter((_, idx) => idx !== i))
-                          }
-                          className="shrink-0 rounded-lg p-1.5 text-ink-400 hover:bg-ink-800 hover:text-ink-200"
-                        >
-                          ✕
-                        </button>
-                      )}
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <input
+                          aria-label="Start time"
+                          type="time"
+                          value={session.start}
+                          onChange={(e) => updateSession(i, { start: e.target.value })}
+                          className={`${inputBase} w-0 min-w-0 flex-1`}
+                        />
+                        <span className="text-ink-400">–</span>
+                        <input
+                          aria-label="End time"
+                          type="time"
+                          value={session.end}
+                          onChange={(e) => updateSession(i, { end: e.target.value })}
+                          className={`${inputBase} w-0 min-w-0 flex-1`}
+                        />
+                        {sessions.length > 1 && (
+                          <button
+                            type="button"
+                            aria-label="Remove this session"
+                            onClick={() =>
+                              setSessions((prev) => prev.filter((_, idx) => idx !== i))
+                            }
+                            className="shrink-0 rounded-lg p-1.5 text-ink-400 hover:bg-ink-800 hover:text-ink-200"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -602,8 +606,12 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
   );
 }
 
-const inputClass =
-  "w-full rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-[13px] text-ink-200 placeholder:text-ink-400 focus:border-ink-600 focus:outline-none focus-visible:ring-1 focus-visible:ring-mat-500/60";
+// Width is kept out of the base so callers in a flex row can set their own —
+// two width utilities on one element is a coin toss over which wins.
+const inputBase =
+  "rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-[13px] text-ink-200 placeholder:text-ink-400 focus:border-ink-600 focus:outline-none focus-visible:ring-1 focus-visible:ring-mat-500/60";
+
+const inputClass = `w-full ${inputBase}`;
 
 function Field({
   label,

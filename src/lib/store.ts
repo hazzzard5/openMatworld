@@ -31,30 +31,42 @@ const seedGyms = seed as Gym[];
 
 const DATA_FILE = path.join(process.cwd(), "data", "gyms.local.json");
 
-let memory: Gym[] | null = null;
+/**
+ * Only used when the file can't be written (a read-only serverless disk).
+ * Otherwise the file is re-read on every call: Next.js gives pages and route
+ * handlers separate module instances, so a cached array in one of them would
+ * never see writes made by the other.
+ */
+let fallbackMemory: Gym[] | null = null;
 let memoryOnly = false;
 
 async function loadFile(): Promise<Gym[]> {
-  if (memory) return memory;
-  try {
-    const raw = await fs.readFile(DATA_FILE, "utf8");
-    memory = JSON.parse(raw) as Gym[];
-  } catch {
-    memory = seedGyms.map((g) => ({ ...g }));
-    await saveFile();
+  if (memoryOnly) {
+    fallbackMemory ??= seedGyms.map((g) => ({ ...g }));
+    return fallbackMemory;
   }
-  return memory;
+  try {
+    return JSON.parse(await fs.readFile(DATA_FILE, "utf8")) as Gym[];
+  } catch {
+    const seeded = seedGyms.map((g) => ({ ...g }));
+    await saveFile(seeded);
+    return memoryOnly ? (fallbackMemory ?? seeded) : seeded;
+  }
 }
 
-async function saveFile(): Promise<void> {
-  if (memoryOnly || !memory) return;
+async function saveFile(gyms: Gym[]): Promise<void> {
+  if (memoryOnly) {
+    fallbackMemory = gyms;
+    return;
+  }
   try {
     await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-    await fs.writeFile(DATA_FILE, JSON.stringify(memory, null, 2) + "\n", "utf8");
+    await fs.writeFile(DATA_FILE, JSON.stringify(gyms, null, 2) + "\n", "utf8");
   } catch {
     // Read-only filesystem (e.g. a serverless deploy without Supabase).
     // Keep serving from memory rather than failing the request.
     memoryOnly = true;
+    fallbackMemory = gyms;
   }
 }
 
@@ -170,7 +182,7 @@ export async function createGym(input: NewGym): Promise<Gym> {
     createdAt: new Date().toISOString(),
   };
   all.push(gym);
-  await saveFile();
+  await saveFile(all);
   return gym;
 }
 
@@ -189,7 +201,7 @@ export async function setGymStatus(id: string, status: GymStatus): Promise<Gym |
   const gym = all.find((g) => g.id === id);
   if (!gym) return null;
   gym.status = status;
-  await saveFile();
+  await saveFile(all);
   return gym;
 }
 
