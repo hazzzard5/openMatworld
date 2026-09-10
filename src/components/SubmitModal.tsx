@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { normalizeWebsite } from "@/lib/url";
 import {
   DAYS,
   DAY_LABELS,
@@ -25,6 +26,7 @@ const emptySession = (): MatSession => ({ day: "sat", start: "11:00", end: "13:0
 export default function SubmitModal({ open, onClose, onAdded }: Props) {
   const formId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
 
   const [name, setName] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
@@ -119,6 +121,12 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
     };
   }, [locationQuery, place, manual]);
 
+  useEffect(() => {
+    if (error) {
+      errorRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [error]);
+
   if (!open) return null;
 
   /** Builds a Place from the manual fields, or null if they're not usable. */
@@ -154,6 +162,14 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
       setError("Pick at least one style.");
       return;
     }
+    if (!normalizeWebsite(website)) {
+      setError(
+        website.trim()
+          ? "That website doesn't look like a working address — try yourgym.com."
+          : "Add your gym's website so visitors can check you're a real academy.",
+      );
+      return;
+    }
     if (sessions.some((s) => s.end <= s.start)) {
       setError("Each session needs to end after it starts.");
       return;
@@ -183,12 +199,18 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
       });
       const data = (await res.json()) as {
         error?: string;
+        issues?: { message?: string }[];
         gym?: Gym;
         status?: "pending" | "approved";
       };
 
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong. Try again.");
+        // Field-level messages are far more useful than "some fields need fixing".
+        setError(
+          data.issues?.find((i) => i.message)?.message ??
+            data.error ??
+            "Something went wrong. Try again.",
+        );
         return;
       }
 
@@ -509,27 +531,36 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
                 />
               </Field>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Website" htmlFor={`${formId}-web`}>
-                  <input
-                    id={`${formId}-web`}
-                    type="url"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    placeholder="https://…"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Instagram" htmlFor={`${formId}-ig`}>
-                  <input
-                    id={`${formId}-ig`}
-                    value={instagram}
-                    onChange={(e) => setInstagram(e.target.value)}
-                    placeholder="@yourgym"
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
+              <Field
+                label="Website"
+                htmlFor={`${formId}-web`}
+                required
+                hint="Shown on your listing so visitors can check you're a real academy before turning up."
+              >
+                <input
+                  id={`${formId}-web`}
+                  type="text"
+                  inputMode="url"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  required
+                  maxLength={240}
+                  placeholder="yourgym.com"
+                  aria-invalid={website.trim() !== "" && !normalizeWebsite(website)}
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Instagram" htmlFor={`${formId}-ig`}>
+                <input
+                  id={`${formId}-ig`}
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  maxLength={120}
+                  placeholder="@yourgym"
+                  className={inputClass}
+                />
+              </Field>
 
               <Field
                 label="Contact email"
@@ -575,6 +606,7 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
 
               {error && (
                 <p
+                  ref={errorRef}
                   role="alert"
                   className="rounded-lg border border-mat-500/40 bg-mat-500/10 px-3 py-2 text-[12.5px] text-mat-300"
                 >

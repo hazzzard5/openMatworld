@@ -14,7 +14,9 @@ travelling, and let gyms put their own sessions on the map.
 - **A left rail** to search, filter by style, and drill into a gym's schedule,
   drop-in cost and links.
 - **A submission form** so any gym can add itself — address lookup, opening
-  times, styles, contact details.
+  times, styles, contact details. A public **website is required**: it's shown
+  on the listing so a visitor can check the academy is real before turning up,
+  and it gives the moderator something to click before approving.
 - **A moderation queue** at `/admin`, because an open submission form without
   one fills up with junk.
 - **A sponsor rail** on the right. It's real layout space, populated from
@@ -63,6 +65,15 @@ a bad idea once anyone can find the site.
 for one person moderating their own map, and not enough for a team — put it
 behind real auth before you hand out access.
 
+Each queued gym shows its website and Instagram as links that open in a new
+tab. Opening the site is the check: it should be a real academy, at the city
+the submission claims, with the open mat plausibly on it.
+
+Websites and Instagram handles are normalised and scheme-checked in
+`src/lib/url.ts` before they're stored — `new URL()` on its own accepts
+`javascript:` and `data:`, which would be a stored XSS once rendered as a link.
+Bare domains like `yourgym.com` are accepted and expanded to `https://`.
+
 ## Selling the sponsor rail
 
 Edit `data/sponsors.json`. Each entry takes a `name`, `url`, optional `tagline`
@@ -70,6 +81,14 @@ and `logo` (put the image in `public/`), and a `tier` of `headline` or
 `standard` — headline renders larger and sits at the top. Drop the
 `placeholder: true` flag when a slot is sold, and change the `mailto:` addresses
 in `src/components/SponsorRail.tsx` to your own.
+
+### Gyms without a website
+
+Plenty of small academies run on an Instagram page alone and have no site at
+all. The form currently rejects them. If that turns out to cost you real
+listings, the change is to accept an Instagram profile in place of a website —
+`websiteSchema` in `src/lib/validation.ts`, plus the matching check in
+`SubmitModal`.
 
 ## Notes on the data
 

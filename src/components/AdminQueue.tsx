@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatSession, STYLE_LABELS, type Gym } from "@/lib/types";
+import { displayHost, normalizeInstagram, safeHref } from "@/lib/url";
 
 const KEY_STORAGE = "openmat.adminKey";
 
@@ -152,9 +153,31 @@ export default function AdminQueue() {
                   {gym.notes && (
                     <p className="mt-1 text-[12px] text-ink-400">{gym.notes}</p>
                   )}
-                  <p className="mt-2 space-x-3 text-[12px] text-ink-400">
-                    {gym.website && <span>{gym.website}</span>}
-                    {gym.instagram && <span>@{gym.instagram}</span>}
+                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink-400">
+                    {/* Open these before approving — they're the whole point
+                        of asking for a website. */}
+                    {safeHref(gym.website) ? (
+                      <a
+                        href={safeHref(gym.website)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-mat-400 underline underline-offset-2 hover:text-mat-300"
+                      >
+                        {displayHost(gym.website!)} ↗
+                      </a>
+                    ) : (
+                      <span className="text-ink-400 italic">no website given</span>
+                    )}
+                    {gym.instagram && normalizeInstagram(gym.instagram) && (
+                      <a
+                        href={`https://instagram.com/${normalizeInstagram(gym.instagram)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-mat-400 underline underline-offset-2 hover:text-mat-300"
+                      >
+                        @{normalizeInstagram(gym.instagram)} ↗
+                      </a>
+                    )}
                     {gym.contactEmail && <span>{gym.contactEmail}</span>}
                   </p>
                 </div>

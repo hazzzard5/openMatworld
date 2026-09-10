@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { STYLES, STYLE_LABELS, type Gym, type Style } from "@/lib/types";
 import { formatCountdown, isLiveNow, nextSession } from "@/lib/gyms";
+import { displayHost, normalizeInstagram, safeHref } from "@/lib/url";
 import { formatSession } from "@/lib/types";
 
 type Props = {
@@ -235,6 +236,11 @@ function GymRow({
 }
 
 function GymDetail({ gym }: { gym: Gym }) {
+  // Rows submitted before websites were required — and before scheme
+  // checking — still have to render safely.
+  const website = safeHref(gym.website);
+  const handle = gym.instagram ? normalizeInstagram(gym.instagram) : null;
+
   return (
     <div className="space-y-3 border-t border-ink-700/70 pt-3">
       <div className="flex flex-wrap gap-1.5">
@@ -268,14 +274,16 @@ function GymDetail({ gym }: { gym: Gym }) {
       {gym.address && <p className="text-[12px] text-ink-400">{gym.address}</p>}
       {gym.notes && <p className="text-[12px] leading-relaxed text-ink-300">{gym.notes}</p>}
 
+      {website && (
+        <div>
+          <p className="mb-1 text-[10.5px] tracking-wide text-ink-400 uppercase">Verify</p>
+          <ExternalLink href={website}>{displayHost(website)} ↗</ExternalLink>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
-        {gym.website && (
-          <ExternalLink href={gym.website}>Website</ExternalLink>
-        )}
-        {gym.instagram && (
-          <ExternalLink href={`https://instagram.com/${gym.instagram}`}>
-            @{gym.instagram}
-          </ExternalLink>
+        {handle && (
+          <ExternalLink href={`https://instagram.com/${handle}`}>@{handle}</ExternalLink>
         )}
         <ExternalLink
           href={`https://www.google.com/maps/search/?api=1&query=${gym.lat},${gym.lng}`}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DAYS, STYLES } from "./types";
+import { normalizeInstagram, normalizeWebsite } from "./url";
 
 const time = z
   .string()
@@ -16,6 +17,31 @@ export const sessionSchema = z
     path: ["end"],
   });
 
+/**
+ * Required: a public website is the one thing that lets a visitor — and the
+ * moderator — check that an academy is real before turning up to train.
+ */
+const websiteSchema = z
+  .string()
+  .trim()
+  .min(1, "A website is required so people can check the gym is real")
+  .max(240, "That address is too long")
+  .refine((v) => normalizeWebsite(v) !== null, {
+    message: "Enter a working web address, like yourgym.com",
+  })
+  .transform((v) => normalizeWebsite(v)!);
+
+/** Optional, but a broken handle makes a broken link, so it's checked too. */
+const instagramSchema = z
+  .string()
+  .trim()
+  .max(120)
+  .optional()
+  .refine((v) => !v || normalizeInstagram(v) !== null, {
+    message: "Use just your handle, like @yourgym",
+  })
+  .transform((v) => (v ? (normalizeInstagram(v) ?? undefined) : undefined));
+
 export const gymSubmissionSchema = z.object({
   name: z.string().trim().min(2, "Gym name is required").max(120),
   city: z.string().trim().min(1, "City is required").max(120),
@@ -26,8 +52,8 @@ export const gymSubmissionSchema = z.object({
   styles: z.array(z.enum(STYLES)).min(1, "Pick at least one style"),
   sessions: z.array(sessionSchema).min(1, "Add at least one open mat time").max(14),
   dropIn: z.string().trim().max(120).optional().or(z.literal("")),
-  website: z.string().trim().url("Must be a full URL").max(240).optional().or(z.literal("")),
-  instagram: z.string().trim().max(120).optional().or(z.literal("")),
+  website: websiteSchema,
+  instagram: instagramSchema,
   contactEmail: z.string().trim().email("Not a valid email").max(160).optional().or(z.literal("")),
   notes: z.string().trim().max(600).optional().or(z.literal("")),
   /** Honeypot: real people leave this empty. */
@@ -49,8 +75,8 @@ export function normalize(input: GymSubmission) {
     styles: input.styles,
     sessions: input.sessions,
     dropIn: blank(input.dropIn),
-    website: blank(input.website),
-    instagram: blank(input.instagram)?.replace(/^@/, ""),
+    website: input.website,
+    instagram: input.instagram,
     contactEmail: blank(input.contactEmail),
     notes: blank(input.notes),
   };
