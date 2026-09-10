@@ -274,17 +274,23 @@ function GymDetail({ gym }: { gym: Gym }) {
       {gym.address && <p className="text-[12px] text-ink-400">{gym.address}</p>}
       {gym.notes && <p className="text-[12px] leading-relaxed text-ink-300">{gym.notes}</p>}
 
-      {website && (
+      {(website || handle) && (
         <div>
           <p className="mb-1 text-[10.5px] tracking-wide text-ink-400 uppercase">Verify</p>
-          <ExternalLink href={website}>{displayHost(website)} ↗</ExternalLink>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
+            {website && (
+              <ExternalLink href={website}>{displayHost(website)} ↗</ExternalLink>
+            )}
+            {handle && (
+              <ExternalLink href={`https://instagram.com/${handle}`}>
+                @{handle} ↗
+              </ExternalLink>
+            )}
+          </div>
         </div>
       )}
 
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
-        {handle && (
-          <ExternalLink href={`https://instagram.com/${handle}`}>@{handle}</ExternalLink>
-        )}
         <ExternalLink
           href={`https://www.google.com/maps/search/?api=1&query=${gym.lat},${gym.lng}`}
         >

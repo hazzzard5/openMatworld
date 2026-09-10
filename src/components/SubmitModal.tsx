@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { normalizeWebsite } from "@/lib/url";
+import { normalizeInstagram, normalizeWebsite } from "@/lib/url";
 import {
   DAYS,
   DAY_LABELS,
@@ -162,11 +162,18 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
       setError("Pick at least one style.");
       return;
     }
-    if (!normalizeWebsite(website)) {
+    // Flag a malformed entry before falling back to "you need one of these".
+    if (website.trim() && !normalizeWebsite(website)) {
+      setError("That website doesn't look like a working address — try yourgym.com.");
+      return;
+    }
+    if (instagram.trim() && !normalizeInstagram(instagram)) {
+      setError("That Instagram doesn't look right — just the handle, like @yourgym.");
+      return;
+    }
+    if (!normalizeWebsite(website) && !normalizeInstagram(instagram)) {
       setError(
-        website.trim()
-          ? "That website doesn't look like a working address — try yourgym.com."
-          : "Add your gym's website so visitors can check you're a real academy.",
+        "Add a website or an Instagram so visitors can check you're a real academy.",
       );
       return;
     }
@@ -531,36 +538,44 @@ export default function SubmitModal({ open, onClose, onAdded }: Props) {
                 />
               </Field>
 
-              <Field
-                label="Website"
-                htmlFor={`${formId}-web`}
-                required
-                hint="Shown on your listing so visitors can check you're a real academy before turning up."
-              >
-                <input
-                  id={`${formId}-web`}
-                  type="text"
-                  inputMode="url"
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  required
-                  maxLength={240}
-                  placeholder="yourgym.com"
-                  aria-invalid={website.trim() !== "" && !normalizeWebsite(website)}
-                  className={inputClass}
-                />
-              </Field>
+              <fieldset className="rounded-xl border border-ink-800 px-4 pt-3 pb-4">
+                <legend className="px-1.5 text-[12px] font-medium text-ink-300">
+                  Public link<span className="ml-1 text-mat-400">*</span>
+                </legend>
+                <p className="mb-3 text-[11.5px] leading-relaxed text-ink-400">
+                  A website or an Instagram — whichever you have. It goes on your
+                  listing so visitors can check you&apos;re a real academy before
+                  turning up.
+                </p>
 
-              <Field label="Instagram" htmlFor={`${formId}-ig`}>
-                <input
-                  id={`${formId}-ig`}
-                  value={instagram}
-                  onChange={(e) => setInstagram(e.target.value)}
-                  maxLength={120}
-                  placeholder="@yourgym"
-                  className={inputClass}
-                />
-              </Field>
+                <div className="space-y-3">
+                  <Field label="Website" htmlFor={`${formId}-web`}>
+                    <input
+                      id={`${formId}-web`}
+                      type="text"
+                      inputMode="url"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      maxLength={240}
+                      placeholder="yourgym.com"
+                      aria-invalid={website.trim() !== "" && !normalizeWebsite(website)}
+                      className={inputClass}
+                    />
+                  </Field>
+
+                  <Field label="Instagram" htmlFor={`${formId}-ig`}>
+                    <input
+                      id={`${formId}-ig`}
+                      value={instagram}
+                      onChange={(e) => setInstagram(e.target.value)}
+                      maxLength={120}
+                      placeholder="@yourgym"
+                      aria-invalid={instagram.trim() !== "" && !normalizeInstagram(instagram)}
+                      className={inputClass}
+                    />
+                  </Field>
+                </div>
+              </fieldset>
 
               <Field
                 label="Contact email"

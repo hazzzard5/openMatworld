@@ -18,20 +18,22 @@ export const sessionSchema = z
   });
 
 /**
- * Required: a public website is the one thing that lets a visitor — and the
- * moderator — check that an academy is real before turning up to train.
+ * Both links are individually optional, but the object-level check below
+ * requires one of them: a public page is what lets a visitor — and the
+ * moderator — confirm an academy is real before turning up to train.
+ * Plenty of small gyms run on an Instagram page alone and have no website.
  */
 const websiteSchema = z
   .string()
   .trim()
-  .min(1, "A website is required so people can check the gym is real")
   .max(240, "That address is too long")
-  .refine((v) => normalizeWebsite(v) !== null, {
+  .optional()
+  .refine((v) => !v || normalizeWebsite(v) !== null, {
     message: "Enter a working web address, like yourgym.com",
   })
-  .transform((v) => normalizeWebsite(v)!);
+  .transform((v) => (v ? (normalizeWebsite(v) ?? undefined) : undefined));
 
-/** Optional, but a broken handle makes a broken link, so it's checked too. */
+/** A broken handle makes a broken link, so it's checked too. */
 const instagramSchema = z
   .string()
   .trim()
@@ -42,7 +44,7 @@ const instagramSchema = z
   })
   .transform((v) => (v ? (normalizeInstagram(v) ?? undefined) : undefined));
 
-export const gymSubmissionSchema = z.object({
+const gymSubmissionFields = z.object({
   name: z.string().trim().min(2, "Gym name is required").max(120),
   city: z.string().trim().min(1, "City is required").max(120),
   country: z.string().trim().min(1, "Country is required").max(120),
@@ -59,6 +61,14 @@ export const gymSubmissionSchema = z.object({
   /** Honeypot: real people leave this empty. */
   website_url: z.string().max(0).optional(),
 });
+
+export const gymSubmissionSchema = gymSubmissionFields.refine(
+  (v) => Boolean(v.website || v.instagram),
+  {
+    message: "Add a website or an Instagram handle so people can check the gym is real",
+    path: ["website"],
+  },
+);
 
 export type GymSubmission = z.infer<typeof gymSubmissionSchema>;
 

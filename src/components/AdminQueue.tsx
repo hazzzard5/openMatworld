@@ -126,84 +126,104 @@ export default function AdminQueue() {
       ) : (
         <ul className="mt-6 space-y-3">
           {pending.map((gym) => (
-            <li
+            <PendingRow
               key={gym.id}
-              className="rounded-xl border border-ink-700 bg-ink-900 px-5 py-4"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-[14px] font-semibold text-white">{gym.name}</h2>
-                  <p className="mt-0.5 text-[12.5px] text-ink-400">
-                    {gym.address ?? `${gym.city}, ${gym.country}`}
-                    <span className="ml-2 tabular-nums">
-                      ({gym.lat.toFixed(3)}, {gym.lng.toFixed(3)})
-                    </span>
-                  </p>
-                  <p className="mt-2 text-[12.5px] text-ink-300">
-                    {gym.styles.map((s) => STYLE_LABELS[s]).join(" · ")}
-                  </p>
-                  <ul className="mt-1 text-[12.5px] text-ink-200 tabular-nums">
-                    {gym.sessions.map((s, i) => (
-                      <li key={i}>{formatSession(s)}</li>
-                    ))}
-                  </ul>
-                  {gym.dropIn && (
-                    <p className="mt-1 text-[12.5px] text-ink-300">Drop-in: {gym.dropIn}</p>
-                  )}
-                  {gym.notes && (
-                    <p className="mt-1 text-[12px] text-ink-400">{gym.notes}</p>
-                  )}
-                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink-400">
-                    {/* Open these before approving — they're the whole point
-                        of asking for a website. */}
-                    {safeHref(gym.website) ? (
-                      <a
-                        href={safeHref(gym.website)!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-mat-400 underline underline-offset-2 hover:text-mat-300"
-                      >
-                        {displayHost(gym.website!)} ↗
-                      </a>
-                    ) : (
-                      <span className="text-ink-400 italic">no website given</span>
-                    )}
-                    {gym.instagram && normalizeInstagram(gym.instagram) && (
-                      <a
-                        href={`https://instagram.com/${normalizeInstagram(gym.instagram)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-mat-400 underline underline-offset-2 hover:text-mat-300"
-                      >
-                        @{normalizeInstagram(gym.instagram)} ↗
-                      </a>
-                    )}
-                    {gym.contactEmail && <span>{gym.contactEmail}</span>}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col gap-2">
-                  <button
-                    type="button"
-                    disabled={busy === gym.id}
-                    onClick={() => decide(gym.id, "approved")}
-                    className="rounded-lg bg-live-500 px-3 py-1.5 text-[12.5px] font-semibold text-ink-950 disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy === gym.id}
-                    onClick={() => decide(gym.id, "rejected")}
-                    className="rounded-lg border border-ink-600 px-3 py-1.5 text-[12.5px] text-ink-300 disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
-                </div>
-              </div>
-            </li>
+              gym={gym}
+              busy={busy === gym.id}
+              onDecide={decide}
+            />
           ))}
         </ul>
       )}
     </main>
+  );
+}
+
+function PendingRow({
+  gym,
+  busy,
+  onDecide,
+}: {
+  gym: Gym;
+  busy: boolean;
+  onDecide: (id: string, status: "approved" | "rejected") => void;
+}) {
+  const website = safeHref(gym.website);
+  const handle = gym.instagram ? normalizeInstagram(gym.instagram) : null;
+
+  return (
+    <li className="rounded-xl border border-ink-700 bg-ink-900 px-5 py-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-[14px] font-semibold text-white">{gym.name}</h2>
+          <p className="mt-0.5 text-[12.5px] text-ink-400">
+            {gym.address ?? `${gym.city}, ${gym.country}`}
+            <span className="ml-2 tabular-nums">
+              ({gym.lat.toFixed(3)}, {gym.lng.toFixed(3)})
+            </span>
+          </p>
+          <p className="mt-2 text-[12.5px] text-ink-300">
+            {gym.styles.map((s) => STYLE_LABELS[s]).join(" · ")}
+          </p>
+          <ul className="mt-1 text-[12.5px] text-ink-200 tabular-nums">
+            {gym.sessions.map((s, i) => (
+              <li key={i}>{formatSession(s)}</li>
+            ))}
+          </ul>
+          {gym.dropIn && (
+            <p className="mt-1 text-[12.5px] text-ink-300">Drop-in: {gym.dropIn}</p>
+          )}
+          {gym.notes && <p className="mt-1 text-[12px] text-ink-400">{gym.notes}</p>}
+
+          <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink-400">
+            {/* Open these before approving — they're the whole point of
+                asking for a public link. */}
+            {website && (
+              <a
+                href={website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-mat-400 underline underline-offset-2 hover:text-mat-300"
+              >
+                {displayHost(gym.website!)} ↗
+              </a>
+            )}
+            {handle && (
+              <a
+                href={`https://instagram.com/${handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-mat-400 underline underline-offset-2 hover:text-mat-300"
+              >
+                @{handle} ↗
+              </a>
+            )}
+            {!website && !handle && (
+              <span className="text-ink-400 italic">no public link</span>
+            )}
+            {gym.contactEmail && <span>{gym.contactEmail}</span>}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onDecide(gym.id, "approved")}
+            className="rounded-lg bg-live-500 px-3 py-1.5 text-[12.5px] font-semibold text-ink-950 disabled:opacity-50"
+          >
+            Approve
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onDecide(gym.id, "rejected")}
+            className="rounded-lg border border-ink-600 px-3 py-1.5 text-[12.5px] text-ink-300 disabled:opacity-50"
+          >
+            Reject
+          </button>
+        </div>
+      </div>
+    </li>
   );
 }
