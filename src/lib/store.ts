@@ -15,7 +15,15 @@ import placeholderSponsors from "../../data/sponsors.json";
  *    degrades to in-memory, which is fine for a preview deploy.
  */
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
+/**
+ * Normalised so it survives however the value was pasted. A trailing slash
+ * turns the REST path into "//rest/v1/..." and a pasted "/rest/v1" suffix
+ * doubles it — PostgREST answers both with PGRST125, "Invalid path specified
+ * in request URL", which is a confusing thing to debug from the dashboard.
+ */
+const SUPABASE_URL = process.env.SUPABASE_URL?.trim()
+  .replace(/\/+$/, "")
+  .replace(/\/rest\/v1$/, "");
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const useSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
@@ -228,6 +236,8 @@ type SponsorRow = {
   url: string;
   logo_url: string | null;
   tier: Sponsor["tier"];
+  starts_at: string | null;
+  ends_at: string | null;
 };
 
 const placeholders = placeholderSponsors as Sponsor[];
@@ -242,17 +252,26 @@ export async function listSponsors(): Promise<Sponsor[]> {
 
   try {
     // Explicit column list: contact details and Stripe ids never leave the server.
+    // The date window is applied below rather than in the query — expressing
+    // "(not started yet or started) and (no end or not ended)" in PostgREST
+    // needs nested and/or groups, and there are only ever a handful of rows.
     const res = await supabase(
-      "sponsors?select=id,name,tagline,url,logo_url,tier" +
+      "sponsors?select=id,name,tagline,url,logo_url,tier,starts_at,ends_at" +
         "&status=eq.active" +
-        `&or=(starts_at.is.null,starts_at.lte.${new Date().toISOString()})` +
-        `&or=(ends_at.is.null,ends_at.gt.${new Date().toISOString()})` +
+        // 'headline' sorts before 'standard', so plain ascending order puts
+        // the headline slot on top.
         "&order=tier.asc,sort_order.asc",
     );
-    const rows = (await res.json()) as SponsorRow[];
-    if (rows.length === 0) return placeholders;
 
-    return rows.map((row) => ({
+    const now = Date.now();
+    const live = ((await res.json()) as SponsorRow[]).filter(
+      (row) =>
+        (!row.starts_at || Date.parse(row.starts_at) <= now) &&
+        (!row.ends_at || Date.parse(row.ends_at) > now),
+    );
+    if (live.length === 0) return placeholders;
+
+    return live.map((row) => ({
       id: row.id,
       name: row.name,
       tagline: row.tagline ?? undefined,
