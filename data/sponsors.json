@@ -3,7 +3,7 @@
     "id": "slot-1",
     "name": "Your brand here",
     "tagline": "Headline slot \u2014 seen on every session, every country.",
-    "url": "mailto:sponsors@openmat.world?subject=Headline%20sponsorship",
+    "url": "mailto:sponsor@narigroup.net?subject=Headline%20sponsorship",
     "tier": "headline",
     "placeholder": true
   },
@@ -11,7 +11,7 @@
     "id": "slot-2",
     "name": "Gi & rashguard brands",
     "tagline": "Put your kit in front of people looking for a place to train.",
-    "url": "mailto:sponsors@openmat.world?subject=Sponsorship",
+    "url": "mailto:sponsor@narigroup.net?subject=Sponsorship",
     "tier": "standard",
     "placeholder": true
   },
@@ -19,7 +19,7 @@
     "id": "slot-3",
     "name": "Camps & seminars",
     "tagline": "Promote a training camp to travelling grapplers.",
-    "url": "mailto:sponsors@openmat.world?subject=Sponsorship",
+    "url": "mailto:sponsor@narigroup.net?subject=Sponsorship",
     "tier": "standard",
     "placeholder": true
   }

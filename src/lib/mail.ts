@@ -13,7 +13,7 @@ import type { SponsorInquiry } from "./types";
  */
 
 const TO = process.env.SPONSOR_TO_EMAIL ?? "sponsor@narigroup.net";
-const FROM = process.env.SPONSOR_FROM_EMAIL ?? "Open Mat World <onboarding@resend.dev>";
+const FROM = process.env.SPONSOR_FROM_EMAIL ?? "Open Mat Atlas <onboarding@resend.dev>";
 
 export type MailResult = { sent: boolean; reason?: string };
 
@@ -84,7 +84,7 @@ function asHtml(i: SponsorInquiry): string {
         : ""
     }
     <p style="margin:20px 0 0;color:#6b7994;font-size:12px">
-      Received ${escapeHtml(new Date(i.createdAt).toUTCString())} · Open Mat World
+      Received ${escapeHtml(new Date(i.createdAt).toUTCString())} · Open Mat Atlas
     </p>
   </div>`;
 }

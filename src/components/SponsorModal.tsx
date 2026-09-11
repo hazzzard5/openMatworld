@@ -120,7 +120,7 @@ export default function SponsorModal({ open, onClose }: Props) {
             <header className="flex items-start justify-between gap-4 border-b border-ink-800 px-6 py-5">
               <div>
                 <h2 id={`${formId}-title`} className="text-[16px] font-semibold text-white">
-                  Sponsor Open Mat World
+                  Sponsor Open Mat Atlas
                 </h2>
                 <p className="mt-1 text-[12.5px] leading-relaxed text-ink-400">
                   Grapplers plan their training trips here. Tell us a little about your

@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
  * User-Agent and no more than 1 request/second, so results are cached and the
  * client debounces.
  */
-const CONTACT = process.env.OPENMAT_CONTACT_EMAIL ?? "hello@openmat.world";
-const USER_AGENT = `OpenMatWorld/0.1 (${CONTACT})`;
+const CONTACT = process.env.OPENMAT_CONTACT_EMAIL ?? "hello@openmatatlas.com";
+const USER_AGENT = `OpenMatAtlas/0.1 (${CONTACT})`;
 
 type Cached = { at: number; body: unknown };
 const cache = new Map<string, Cached>();

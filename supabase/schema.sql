@@ -1,4 +1,4 @@
--- Open Mat World — gym submissions.
+-- Open Mat Atlas — gym submissions.
 -- Apply with the Supabase SQL editor, or `supabase db push`.
 
 create table if not exists public.gyms (

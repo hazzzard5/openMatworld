@@ -1,4 +1,4 @@
-# Open Mat World
+# Open Mat Atlas
 
 An interactive globe of open mats. Spin it, find somewhere to roll when you're
 travelling, and let gyms put their own sessions on the map.

@@ -2,11 +2,12 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Open Mat World — every open mat on one globe",
+  title: "Open Mat Atlas — every open mat on one globe",
   description:
     "A spinning globe of open mats worldwide. Find somewhere to roll when you travel, or put your academy's open mat on the map.",
+  metadataBase: new URL("https://openmatatlas.com"),
   openGraph: {
-    title: "Open Mat World",
+    title: "Open Mat Atlas",
     description: "Every open mat on one globe. Find a session, or add yours.",
     type: "website",
   },

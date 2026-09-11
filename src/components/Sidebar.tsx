@@ -46,7 +46,7 @@ export default function Sidebar({
             <span className="relative size-2.5 rounded-full bg-mat-500" />
           </span>
           <h1 className="text-[15px] leading-none font-semibold tracking-tight text-white">
-            Open Mat World
+            Open Mat Atlas
           </h1>
         </div>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-400">
