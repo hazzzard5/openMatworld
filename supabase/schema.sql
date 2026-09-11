@@ -125,3 +125,30 @@ create index if not exists sponsor_inquiries_status_idx
 alter table public.sponsor_inquiries enable row level security;
 -- No policy: enquiries are private. Writes and reads go through the API
 -- routes using the service-role key, which bypasses RLS.
+
+
+-- ---------------------------------------------------------------------------
+-- Grants
+-- ---------------------------------------------------------------------------
+-- Supabase normally hands new tables in `public` to its built-in roles through
+-- default privileges, but that doesn't always reach tables created this way —
+-- PostgREST then answers 42501, "permission denied for table gyms". Granting
+-- explicitly makes the schema self-sufficient instead of depending on whatever
+-- defaults happen to be in place.
+--
+-- These are table privileges, which are checked before row-level security:
+-- service_role bypasses RLS but still needs the GRANT.
+
+-- The API routes act as service_role.
+grant select, insert, update, delete on public.gyms              to service_role;
+grant select, insert, update, delete on public.sponsors          to service_role;
+grant select, insert, update, delete on public.sponsor_inquiries to service_role;
+
+-- Anonymous reads stay gated by the RLS policies above; without the grant the
+-- policies can never apply. Nothing in the app uses these yet — they exist so
+-- a future browser-side read works without reopening the schema.
+grant select on public.gyms     to anon, authenticated;
+grant select on public.sponsors to anon, authenticated;
+
+-- sponsor_inquiries is deliberately absent: enquiries are private, readable
+-- only through the service-role key.

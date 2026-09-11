@@ -50,7 +50,11 @@ The file-backed store is for development. A serverless deploy has a read-only
 filesystem, so submissions there would live only in memory until the next cold
 start. Point it at Supabase instead:
 
-1. Create a project and run `supabase/schema.sql` in the SQL editor.
+1. Create a project and run `supabase/schema.sql` in the SQL editor. It ends
+   with explicit `grant` statements — Supabase's default privileges don't
+   always reach tables created this way, and without the grants PostgREST
+   answers `42501, permission denied for table gyms` even to the service-role
+   key, which bypasses RLS but is still subject to table privileges.
 2. Run `supabase/seed.sql` to carry the initial listings over. Once Supabase is
    configured, `data/seed-gyms.json` is no longer read — the table is the only
    source of truth, so an empty table means an empty map.
