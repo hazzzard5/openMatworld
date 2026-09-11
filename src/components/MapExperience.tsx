@@ -9,11 +9,13 @@ import type { Gym, Style } from "@/lib/types";
 
 type Props = {
   initialGyms: Gym[];
+  /** True when the listing fetch failed, so the empty map can explain itself. */
+  loadFailed?: boolean;
   /** Rendered on the server so sponsor slots stay static markup. */
   sponsorRail: React.ReactNode;
 };
 
-export default function MapExperience({ initialGyms, sponsorRail }: Props) {
+export default function MapExperience({ initialGyms, loadFailed, sponsorRail }: Props) {
   const [gyms, setGyms] = useState(initialGyms);
   const [query, setQuery] = useState("");
   const [styles, setStyles] = useState<Style[]>([]);
@@ -48,7 +50,16 @@ export default function MapExperience({ initialGyms, sponsorRail }: Props) {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(63,125,255,0.1),transparent_62%)]" />
         <GlobeView gyms={visible} selected={selected} onSelect={setSelected} />
 
-        {visible.length !== gyms.length && (
+        {loadFailed && (
+          <div
+            role="status"
+            className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full border border-mat-500/40 bg-ink-900/95 px-3.5 py-1.5 text-[11.5px] text-mat-300 backdrop-blur"
+          >
+            Couldn&apos;t load listings just now — try refreshing in a moment.
+          </div>
+        )}
+
+        {!loadFailed && visible.length !== gyms.length && (
           <div className="pointer-events-none absolute top-4 left-1/2 -translate-x-1/2 rounded-full border border-ink-700 bg-ink-900/90 px-3.5 py-1.5 text-[11.5px] text-ink-300 backdrop-blur">
             Showing {visible.length} of {gyms.length} mats
           </div>

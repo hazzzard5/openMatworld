@@ -124,20 +124,40 @@ function rowToGym(row: Row): Gym {
 }
 
 async function supabase(pathname: string, init: RequestInit = {}): Promise<Response> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathname}`, {
-    ...init,
-    cache: "no-store",
-    headers: {
-      apikey: SUPABASE_KEY!,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
-  });
-  if (!res.ok) {
-    throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+  const method = (init.method ?? "GET").toUpperCase();
+  // Only reads are retried. Replaying a POST could insert the same gym twice.
+  const retryable = method === "GET";
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= (retryable ? 1 : 0); attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 350));
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathname}`, {
+        ...init,
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          apikey: SUPABASE_KEY!,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          ...init.headers,
+        },
+      });
+
+      if (res.ok) return res;
+
+      const body = await res.text();
+      lastError = new Error(`Supabase ${res.status}: ${body}`);
+      // 4xx means the request itself is wrong — retrying just repeats it.
+      if (res.status < 500) throw lastError;
+    } catch (err) {
+      lastError = err;
+      if (err instanceof Error && err.message.startsWith("Supabase 4")) throw err;
+    }
   }
-  return res;
+
+  throw lastError;
 }
 
 /* ------------------------------------------------------------------ */
