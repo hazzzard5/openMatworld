@@ -51,8 +51,13 @@ filesystem, so submissions there would live only in memory until the next cold
 start. Point it at Supabase instead:
 
 1. Create a project and run `supabase/schema.sql` in the SQL editor.
-2. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
-3. Set `OPENMAT_ADMIN_KEY` to something you generated, not something you typed.
+2. Run `supabase/seed.sql` to carry the initial listings over. Once Supabase is
+   configured, `data/seed-gyms.json` is no longer read — the table is the only
+   source of truth, so an empty table means an empty map.
+3. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+4. Set `OPENMAT_ADMIN_KEY` to something you generated, not something you typed.
+5. Redeploy. Vercel attaches environment variables at deploy time, so a build
+   created before you added them will not see them.
 
 The service-role key is only ever used server-side in `src/lib/store.ts`; it is
 never sent to the browser.
