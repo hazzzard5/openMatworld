@@ -94,6 +94,15 @@ and `logo` (put the image in `public/`), and a `tier` of `headline` or
 `placeholder: true` flag when a slot is sold, and change the `mailto:` addresses
 in `src/components/SponsorRail.tsx` to your own.
 
+## Analytics
+
+Vercel Web Analytics is mounted in `src/app/layout.tsx`. It is cookieless and
+collects no personal data, so it needs no consent banner, and it no-ops outside
+production — local runs don't pollute the numbers.
+
+It also has to be switched on for the project: Vercel → the project →
+Analytics → Enable. Until that is done the script loads and reports nothing.
+
 ## Sponsors and billing
 
 `data/sponsors.json` holds the placeholder slots shown while a tier is unsold.
