@@ -50,6 +50,12 @@ export type Gym = {
   contactEmail?: string;
   notes?: string;
   status: GymStatus;
+  /**
+   * IANA zone resolved from the coordinates when the listing is read, not
+   * stored. Lets "on now" respect real timezone boundaries and daylight
+   * saving instead of guessing from longitude.
+   */
+  timezone?: string;
   createdAt: string;
 };
 

@@ -8,10 +8,55 @@ function toMinutes(hhmm: string): number {
   return h * 60 + m;
 }
 
+const WEEKDAY_KEYS: Record<string, Day> = {
+  Mon: "mon",
+  Tue: "tue",
+  Wed: "wed",
+  Thu: "thu",
+  Fri: "fri",
+  Sat: "sat",
+  Sun: "sun",
+};
+
 /**
- * Wall-clock time at a gym, approximated from its longitude (15° per hour).
- * We don't ask submitters for a timezone, and a solar estimate is close enough
- * to answer "is anything rolling right now?" — the UI says it's approximate.
+ * Wall-clock time in an IANA zone. Intl handles daylight saving and the real
+ * zone boundaries, which a longitude estimate cannot: in September, Ohio is
+ * on EDT (UTC-4) while its longitude suggests UTC-5:37 — an hour and a half
+ * out, which is enough to call a finished session "on now".
+ */
+function zonedNow(timeZone: string, now: Date): { day: Day; minutes: number } | null {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now);
+
+    const get = (type: string) => parts.find((p) => p.type === type)?.value;
+    const day = WEEKDAY_KEYS[get("weekday") ?? ""];
+    const hour = Number(get("hour"));
+    const minute = Number(get("minute"));
+
+    if (!day || !Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    return { day, minutes: hour * 60 + minute };
+  } catch {
+    // Unknown zone name — fall back to the estimate.
+    return null;
+  }
+}
+
+/** Local time at a gym: its real zone when we have one, else the estimate. */
+export function localNow(gym: Pick<Gym, "lng" | "timezone">, now = new Date()) {
+  const zoned = gym.timezone ? zonedNow(gym.timezone, now) : null;
+  return zoned ?? approxLocalNow(gym.lng, now);
+}
+
+/**
+ * Fallback only: wall-clock estimated from longitude (15° per hour). Ignores
+ * daylight saving and zone boundaries, so it can be well over an hour out.
+ * Used when a coordinate has no resolvable timezone.
  */
 export function approxLocalNow(lng: number, now = new Date()): { day: Day; minutes: number } {
   const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
@@ -39,7 +84,7 @@ function minutesUntil(from: { day: Day; minutes: number }, session: MatSession):
 }
 
 export function isLiveNow(gym: Gym, now = new Date()): boolean {
-  const local = approxLocalNow(gym.lng, now);
+  const local = localNow(gym, now);
   return gym.sessions.some((s) => {
     if (s.day !== local.day) return false;
     return local.minutes >= toMinutes(s.start) && local.minutes < toMinutes(s.end);
@@ -49,7 +94,7 @@ export function isLiveNow(gym: Gym, now = new Date()): boolean {
 export type NextUp = { session: MatSession; inMinutes: number };
 
 export function nextSession(gym: Gym, now = new Date()): NextUp | null {
-  const local = approxLocalNow(gym.lng, now);
+  const local = localNow(gym, now);
   let best: NextUp | null = null;
   for (const session of gym.sessions) {
     const inMinutes = minutesUntil(local, session);

@@ -124,8 +124,9 @@ export default function Sidebar({
       </div>
 
       <footer className="border-t border-ink-800 px-5 py-3 text-[11px] leading-relaxed text-ink-400">
-        Times are shown as the gym&apos;s local time. &ldquo;On now&rdquo; is estimated from
-        longitude, so treat it as a hint — always check with the gym first.
+        Times are the gym&apos;s local time, and &ldquo;on now&rdquo; follows its real
+        timezone including daylight saving. Schedules still change — check with the
+        gym before you travel.
       </footer>
     </aside>
   );

@@ -149,10 +149,17 @@ With no key set, sending is skipped and the row is still written — the server
 logs the enquiry so nothing is silently lost. Unsent enquiries are the rows in
 `sponsor_inquiries` with `emailed_at is null`.
 
-"On now" is estimated from longitude (15° per hour) rather than a real timezone
-database, because the form doesn't ask submitters for a timezone. It's right to
-within about an hour for most places and wrong wherever politics beat geography.
-The UI says so; treat it as a hint, not a schedule.
+"On now" uses the gym's real timezone. The zone is resolved from its
+coordinates with `tz-lookup` when a listing is read — server-side, so the
+boundary table stays out of the browser bundle — and travels with the gym as
+`timezone`. The client then asks `Intl` for the wall clock in that zone, which
+handles daylight saving for free.
+
+This replaced an estimate based on longitude alone, which was wrong twice over:
+it ignored daylight saving, and it ignored that zones don't follow meridians.
+In September a gym in Ohio came out 97 minutes early — enough to show a
+finished session as "on now". The longitude estimate survives only as a
+fallback for coordinates with no resolvable zone.
 
 Listing coordinates are often only accurate to the city, which is fine for a
 pin on a globe and useless for directions — so the Directions link uses the

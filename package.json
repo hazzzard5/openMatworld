@@ -16,6 +16,7 @@
     "react-dom": "19.3.0",
     "react-globe.gl": "2.38.0",
     "three": "0.186.0",
+    "tz-lookup": "^6.1.25",
     "zod": "4.6.1"
   },
   "devDependencies": {

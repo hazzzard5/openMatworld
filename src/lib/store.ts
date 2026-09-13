@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Gym, GymStatus, Sponsor, SponsorInquiry } from "./types";
+import { timezoneFor } from "./timezone";
 import seed from "../../data/seed-gyms.json";
 import placeholderSponsors from "../../data/sponsors.json";
 
@@ -49,13 +50,20 @@ const DATA_FILE = path.join(process.cwd(), "data", "gyms.local.json");
 let fallbackMemory: Gym[] | null = null;
 let memoryOnly = false;
 
+/** Rows from disk or the seed have no zone until we resolve one. */
+function withTimezone(gyms: Gym[]): Gym[] {
+  return gyms.map((gym) =>
+    gym.timezone ? gym : { ...gym, timezone: timezoneFor(gym.lat, gym.lng) },
+  );
+}
+
 async function loadFile(): Promise<Gym[]> {
   if (memoryOnly) {
     fallbackMemory ??= seedGyms.map((g) => ({ ...g }));
     return fallbackMemory;
   }
   try {
-    return JSON.parse(await fs.readFile(DATA_FILE, "utf8")) as Gym[];
+    return withTimezone(JSON.parse(await fs.readFile(DATA_FILE, "utf8")) as Gym[]);
   } catch {
     const seeded = seedGyms.map((g) => ({ ...g }));
     await saveFile(seeded);
@@ -103,13 +111,16 @@ type Row = {
 };
 
 function rowToGym(row: Row): Gym {
+  const lat = Number(row.lat);
+  const lng = Number(row.lng);
   return {
+    timezone: timezoneFor(lat, lng),
     id: row.id,
     name: row.name,
     city: row.city,
     country: row.country,
-    lat: Number(row.lat),
-    lng: Number(row.lng),
+    lat,
+    lng,
     address: row.address ?? undefined,
     styles: row.styles as Gym["styles"],
     sessions: (row.sessions ?? []) as Gym["sessions"],
@@ -206,6 +217,7 @@ export async function createGym(input: NewGym): Promise<Gym> {
   const all = await loadFile();
   const gym: Gym = {
     ...input,
+    timezone: timezoneFor(input.lat, input.lng),
     id: randomUUID(),
     status,
     createdAt: new Date().toISOString(),
