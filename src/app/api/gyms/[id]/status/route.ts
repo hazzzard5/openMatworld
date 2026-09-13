@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { setGymStatus } from "@/lib/store";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -8,10 +9,8 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const adminKey = process.env.OPENMAT_ADMIN_KEY;
-  if (!adminKey || request.headers.get("x-admin-key") !== adminKey) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
+  const denied = requireAdmin(request);
+  if (denied) return denied;
 
   const { id } = await params;
   const { status } = (await request.json().catch(() => ({}))) as { status?: string };

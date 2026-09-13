@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatSession, STYLE_LABELS, type Gym } from "@/lib/types";
+import { formatSession, STYLE_LABELS, type Gym, type GymStatus } from "@/lib/types";
+import GymEditor from "./GymEditor";
 import { displayHost, normalizeInstagram, safeHref } from "@/lib/url";
 
 const KEY_STORAGE = "openmat.adminKey";
@@ -14,7 +15,9 @@ const KEY_STORAGE = "openmat.adminKey";
 export default function AdminQueue() {
   const [adminKey, setAdminKey] = useState("");
   const [keyInput, setKeyInput] = useState("");
-  const [pending, setPending] = useState<Gym[] | null>(null);
+  const [gyms, setGyms] = useState<Gym[] | null>(null);
+  const [filter, setFilter] = useState<GymStatus | "all">("pending");
+  const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -26,16 +29,16 @@ export default function AdminQueue() {
   const load = useCallback(async (key: string) => {
     setError(null);
     try {
-      const res = await fetch("/api/gyms?status=pending", {
+      const res = await fetch("/api/gyms?status=all", {
         headers: { "x-admin-key": key },
       });
       if (res.status === 401) {
         setError("That key was rejected. Check OPENMAT_ADMIN_KEY on the server.");
-        setPending(null);
+        setGyms(null);
         return false;
       }
       const data = (await res.json()) as { gyms: Gym[] };
-      setPending(data.gyms);
+      setGyms(data.gyms);
       return true;
     } catch {
       setError("Couldn't reach the server.");
@@ -59,7 +62,8 @@ export default function AdminQueue() {
         setError("That didn't save. Try again.");
         return;
       }
-      setPending((prev) => prev?.filter((g) => g.id !== id) ?? null);
+      const { gym } = (await res.json()) as { gym: Gym };
+      setGyms((prev) => prev?.map((g) => (g.id === gym.id ? gym : g)) ?? null);
     } finally {
       setBusy(null);
     }
@@ -119,34 +123,90 @@ export default function AdminQueue() {
 
       {error && <p className="mt-4 text-[12.5px] text-mat-300">{error}</p>}
 
-      {pending === null ? (
+      <div className="mt-5 flex flex-wrap gap-1.5">
+        {(["pending", "approved", "rejected", "all"] as const).map((value) => {
+          const count =
+            value === "all"
+              ? (gyms?.length ?? 0)
+              : (gyms?.filter((g) => g.status === value).length ?? 0);
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => {
+                setFilter(value);
+                setEditing(null);
+              }}
+              className={`rounded-full border px-3 py-1 text-[12px] font-medium capitalize transition ${
+                filter === value
+                  ? "border-mat-500/50 bg-mat-500/15 text-mat-300"
+                  : "border-ink-700 text-ink-400 hover:border-ink-600 hover:text-ink-300"
+              }`}
+            >
+              {value === "approved" ? "live" : value} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {gyms === null ? (
         <p className="mt-8 text-[13px] text-ink-400">Loading…</p>
-      ) : pending.length === 0 ? (
-        <p className="mt-8 text-[13px] text-ink-400">Nothing waiting. Inbox zero.</p>
       ) : (
-        <ul className="mt-6 space-y-3">
-          {pending.map((gym) => (
-            <PendingRow
-              key={gym.id}
-              gym={gym}
-              busy={busy === gym.id}
-              onDecide={decide}
-            />
-          ))}
-        </ul>
+        (() => {
+          const shown = filter === "all" ? gyms : gyms.filter((g) => g.status === filter);
+          if (shown.length === 0) {
+            return (
+              <p className="mt-8 text-[13px] text-ink-400">
+                {filter === "pending"
+                  ? "Nothing waiting. Inbox zero."
+                  : `No ${filter === "approved" ? "live" : filter} listings.`}
+              </p>
+            );
+          }
+          return (
+            <ul className="mt-6 space-y-3">
+              {shown.map((gym) => (
+                <GymRow
+                  key={gym.id}
+                  gym={gym}
+                  busy={busy === gym.id}
+                  editing={editing === gym.id}
+                  adminKey={adminKey}
+                  onEdit={() => setEditing(editing === gym.id ? null : gym.id)}
+                  onDecide={decide}
+                  onSaved={(updated) => {
+                    setGyms((prev) =>
+                      prev?.map((g) => (g.id === updated.id ? updated : g)) ?? null,
+                    );
+                    setEditing(null);
+                  }}
+                />
+              ))}
+            </ul>
+          );
+        })()
       )}
     </main>
   );
 }
 
-function PendingRow({
+function GymRow({
   gym,
   busy,
+  editing,
+  adminKey,
+  onEdit,
   onDecide,
+  onSaved,
 }: {
   gym: Gym;
   busy: boolean;
+  editing: boolean;
+  adminKey: string;
+  onEdit: () => void;
   onDecide: (id: string, status: "approved" | "rejected") => void;
+  onSaved: (gym: Gym) => void;
 }) {
   const website = safeHref(gym.website);
   const handle = gym.instagram ? normalizeInstagram(gym.instagram) : null;
@@ -155,7 +215,10 @@ function PendingRow({
     <li className="rounded-xl border border-ink-700 bg-ink-900 px-5 py-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-[14px] font-semibold text-white">{gym.name}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-[14px] font-semibold text-white">{gym.name}</h2>
+            <StatusBadge status={gym.status} />
+          </div>
           <p className="mt-0.5 text-[12.5px] text-ink-400">
             {gym.address ?? `${gym.city}, ${gym.country}`}
             <span className="ml-2 tabular-nums">
@@ -208,22 +271,57 @@ function PendingRow({
         <div className="flex shrink-0 flex-col gap-2">
           <button
             type="button"
-            disabled={busy}
-            onClick={() => onDecide(gym.id, "approved")}
-            className="rounded-lg bg-live-500 px-3 py-1.5 text-[12.5px] font-semibold text-ink-950 disabled:opacity-50"
+            onClick={onEdit}
+            aria-expanded={editing}
+            className="rounded-lg border border-ink-600 px-3 py-1.5 text-[12.5px] text-ink-200 hover:border-mat-500 hover:text-mat-300"
           >
-            Approve
+            {editing ? "Close" : "Edit"}
           </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onDecide(gym.id, "rejected")}
-            className="rounded-lg border border-ink-600 px-3 py-1.5 text-[12.5px] text-ink-300 disabled:opacity-50"
-          >
-            Reject
-          </button>
+          {gym.status !== "approved" && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onDecide(gym.id, "approved")}
+              className="rounded-lg bg-live-500 px-3 py-1.5 text-[12.5px] font-semibold text-ink-950 disabled:opacity-50"
+            >
+              Approve
+            </button>
+          )}
+          {gym.status !== "rejected" && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onDecide(gym.id, "rejected")}
+              className="rounded-lg border border-ink-600 px-3 py-1.5 text-[12.5px] text-ink-300 disabled:opacity-50"
+            >
+              {gym.status === "approved" ? "Take down" : "Reject"}
+            </button>
+          )}
         </div>
       </div>
+
+      {editing && (
+        <GymEditor
+          gym={gym}
+          adminKey={adminKey}
+          onSaved={onSaved}
+          onCancel={onEdit}
+        />
+      )}
     </li>
+  );
+}
+
+function StatusBadge({ status }: { status: GymStatus }) {
+  const tone =
+    status === "approved"
+      ? "border-live-500/40 text-live-400"
+      : status === "pending"
+        ? "border-mat-500/40 text-mat-300"
+        : "border-ink-600 text-ink-400";
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[10.5px] font-medium ${tone}`}>
+      {status === "approved" ? "live" : status}
+    </span>
   );
 }

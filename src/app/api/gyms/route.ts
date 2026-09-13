@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createGym, findDuplicate, listGyms } from "@/lib/store";
+import { createGym, findDuplicate, listAllGyms, listGyms } from "@/lib/store";
 import { gymSubmissionSchema, normalize } from "@/lib/validation";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -8,14 +9,17 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") ?? "approved";
 
+  // Only the approved list is public; everything else is the moderation view.
   if (status !== "approved") {
-    const adminKey = process.env.OPENMAT_ADMIN_KEY;
-    if (!adminKey || request.headers.get("x-admin-key") !== adminKey) {
-      return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-    }
+    const denied = requireAdmin(request);
+    if (denied) return denied;
   }
 
-  const gyms = await listGyms(status as "approved" | "pending" | "rejected");
+  const gyms =
+    status === "all"
+      ? await listAllGyms()
+      : await listGyms(status as "approved" | "pending" | "rejected");
+
   return NextResponse.json({ gyms });
 }
 

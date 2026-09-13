@@ -215,6 +215,102 @@ export async function createGym(input: NewGym): Promise<Gym> {
   return gym;
 }
 
+/**
+ * A moderator edit. A key is present only when it should change; null clears
+ * a nullable column. Status moves through setGymStatus.
+ */
+export type GymEdit = {
+  name?: string;
+  city?: string;
+  country?: string;
+  lat?: number;
+  lng?: number;
+  styles?: Gym["styles"];
+  sessions?: Gym["sessions"];
+  address?: string | null;
+  dropIn?: string | null;
+  website?: string | null;
+  instagram?: string | null;
+  contactEmail?: string | null;
+  notes?: string | null;
+};
+
+const EDIT_COLUMNS: Record<keyof GymEdit, string> = {
+  name: "name",
+  city: "city",
+  country: "country",
+  lat: "lat",
+  lng: "lng",
+  styles: "styles",
+  sessions: "sessions",
+  address: "address",
+  dropIn: "drop_in",
+  website: "website",
+  instagram: "instagram",
+  contactEmail: "contact_email",
+  notes: "notes",
+};
+
+/**
+ * Applies an edit to one gym. Only keys present in the patch are written —
+ * absent means "leave alone", null means "clear". Collapsing those two would
+ * make editing one field silently wipe every optional column beside it.
+ */
+export async function updateGym(id: string, patch: GymEdit): Promise<Gym | null> {
+  const entries = Object.entries(patch).filter(([key]) => key in EDIT_COLUMNS);
+  if (entries.length === 0) return getGym(id);
+
+  if (useSupabase) {
+    const columns: Record<string, unknown> = {};
+    for (const [key, value] of entries) {
+      columns[EDIT_COLUMNS[key as keyof GymEdit]] = value;
+    }
+
+    const res = await supabase(`gyms?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(columns),
+    });
+    const rows = (await res.json()) as Row[];
+    return rows[0] ? rowToGym(rows[0]) : null;
+  }
+
+  const all = await loadFile();
+  const index = all.findIndex((g) => g.id === id);
+  if (index === -1) return null;
+
+  const gym = { ...all[index] };
+  for (const [key, value] of entries) {
+    if (value === null) {
+      delete (gym as Record<string, unknown>)[key];
+    } else {
+      (gym as Record<string, unknown>)[key] = value;
+    }
+  }
+  all[index] = gym;
+  await saveFile(all);
+  return gym;
+}
+
+/** One gym by id, whatever its status. */
+export async function getGym(id: string): Promise<Gym | null> {
+  if (useSupabase) {
+    const res = await supabase(`gyms?id=eq.${encodeURIComponent(id)}&select=*`);
+    const rows = (await res.json()) as Row[];
+    return rows[0] ? rowToGym(rows[0]) : null;
+  }
+  return (await loadFile()).find((g) => g.id === id) ?? null;
+}
+
+/** Every gym regardless of status — the moderation view. */
+export async function listAllGyms(): Promise<Gym[]> {
+  if (useSupabase) {
+    const res = await supabase("gyms?select=*&order=created_at.desc");
+    return ((await res.json()) as Row[]).map(rowToGym);
+  }
+  return [...(await loadFile())].reverse();
+}
+
 export async function setGymStatus(id: string, status: GymStatus): Promise<Gym | null> {
   if (useSupabase) {
     const res = await supabase(`gyms?id=eq.${encodeURIComponent(id)}`, {
