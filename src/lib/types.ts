@@ -87,6 +87,19 @@ export type SponsorInquiry = {
   createdAt: string;
 };
 
+/**
+ * Label for a stored style. Rows written straight to the database can carry
+ * a value outside the enum — "self-defense" is already live — and looking it
+ * up blind renders an empty chip. Falls back to a tidied version of whatever
+ * is stored.
+ */
+export function styleLabel(style: string): string {
+  return (
+    STYLE_LABELS[style as Style] ??
+    style.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
 /** Formats "14:30" as "2:30pm". */
 export function formatTime(hhmm: string): string {
   const [hStr, mStr] = hhmm.split(":");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { STYLES, STYLE_LABELS, type Gym, type Style } from "@/lib/types";
+import { STYLES, STYLE_LABELS, styleLabel, type Gym, type Style } from "@/lib/types";
 import { formatCountdown, isLiveNow, nextSession } from "@/lib/gyms";
 import { displayHost, normalizeInstagram, safeHref } from "@/lib/url";
 import { formatSession } from "@/lib/types";
@@ -249,7 +249,7 @@ function GymDetail({ gym }: { gym: Gym }) {
             key={s}
             className="rounded border border-ink-700 px-1.5 py-0.5 text-[10.5px] text-ink-300"
           >
-            {STYLE_LABELS[s]}
+            {styleLabel(s)}
           </span>
         ))}
       </div>

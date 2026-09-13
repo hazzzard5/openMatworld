@@ -72,7 +72,8 @@ Submissions land as `pending` and stay off the globe until approved at `/admin`.
 Set `OPENMAT_AUTO_APPROVE=1` to publish them immediately — convenient for a demo,
 a bad idea once anyone can find the site.
 
-`/admin` lists every listing, filtered by status, and each row can be edited
+`/admin` has a search across name, city, country and address, and lists every
+listing filtered by status — and each row can be edited
 in place — name, location, coordinates, styles, times, links and notes. Edits
 go through `PATCH /api/gyms/[id]` and are held to the same validation as a
 public submission, so a moderator can't introduce a value the form would have

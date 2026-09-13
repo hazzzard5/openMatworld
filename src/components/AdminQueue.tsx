@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatSession, STYLE_LABELS, type Gym, type GymStatus } from "@/lib/types";
+import { formatSession, styleLabel, type Gym, type GymStatus } from "@/lib/types";
 import GymEditor from "./GymEditor";
 import { displayHost, normalizeInstagram, safeHref } from "@/lib/url";
 
@@ -18,6 +18,7 @@ export default function AdminQueue() {
   const [gyms, setGyms] = useState<Gym[] | null>(null);
   const [filter, setFilter] = useState<GymStatus | "all">("pending");
   const [editing, setEditing] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -123,12 +124,25 @@ export default function AdminQueue() {
 
       {error && <p className="mt-4 text-[12.5px] text-mat-300">{error}</p>}
 
-      <div className="mt-5 flex flex-wrap gap-1.5">
+      <label className="sr-only" htmlFor="admin-search">
+        Search listings
+      </label>
+      <input
+        id="admin-search"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setEditing(null);
+        }}
+        placeholder="Search name, city, country or address…"
+        className="mt-5 w-full rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-[13px] text-ink-200 placeholder:text-ink-400 focus:border-ink-600 focus:outline-none focus-visible:ring-1 focus-visible:ring-mat-500/60"
+      />
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
         {(["pending", "approved", "rejected", "all"] as const).map((value) => {
+          const pool = matching(gyms, query);
           const count =
-            value === "all"
-              ? (gyms?.length ?? 0)
-              : (gyms?.filter((g) => g.status === value).length ?? 0);
+            value === "all" ? pool.length : pool.filter((g) => g.status === value).length;
           return (
             <button
               key={value}
@@ -154,13 +168,16 @@ export default function AdminQueue() {
         <p className="mt-8 text-[13px] text-ink-400">Loading…</p>
       ) : (
         (() => {
-          const shown = filter === "all" ? gyms : gyms.filter((g) => g.status === filter);
+          const pool = matching(gyms, query);
+          const shown = filter === "all" ? pool : pool.filter((g) => g.status === filter);
           if (shown.length === 0) {
             return (
               <p className="mt-8 text-[13px] text-ink-400">
-                {filter === "pending"
-                  ? "Nothing waiting. Inbox zero."
-                  : `No ${filter === "approved" ? "live" : filter} listings.`}
+                {query.trim()
+                  ? `Nothing matches "${query.trim()}".`
+                  : filter === "pending"
+                    ? "Nothing waiting. Inbox zero."
+                    : `No ${filter === "approved" ? "live" : filter} listings.`}
               </p>
             );
           }
@@ -188,6 +205,23 @@ export default function AdminQueue() {
         })()
       )}
     </main>
+  );
+}
+
+/**
+ * Filters on the fields a moderator actually searches by. Kept client-side:
+ * the admin view already loads every listing, and a round trip per keystroke
+ * would be slower than scanning a few thousand rows in memory.
+ */
+function matching(gyms: Gym[] | null, query: string): Gym[] {
+  if (!gyms) return [];
+  const q = query.trim().toLowerCase();
+  if (!q) return gyms;
+
+  return gyms.filter((gym) =>
+    [gym.name, gym.city, gym.country, gym.address ?? ""].some((field) =>
+      field.toLowerCase().includes(q),
+    ),
   );
 }
 
@@ -226,7 +260,7 @@ function GymRow({
             </span>
           </p>
           <p className="mt-2 text-[12.5px] text-ink-300">
-            {gym.styles.map((s) => STYLE_LABELS[s]).join(" · ")}
+            {gym.styles.map(styleLabel).join(" · ")}
           </p>
           <ul className="mt-1 text-[12.5px] text-ink-200 tabular-nums">
             {gym.sessions.map((s, i) => (
